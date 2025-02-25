@@ -1,0 +1,34 @@
+name: test-php
+
+on:
+  workflow_call:
+  workflow_dispatch:
+
+# We need consistent env vars across all workflows for the cache to work
+env:
+  CARGO_TERM_COLOR: always
+  CLICOLOR_FORCE: 1
+  RUSTFLAGS: "-C debuginfo=0"
+  RUSTDOCFLAGS: "-Dwarnings"
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-22.04]
+    steps:
+      - name: 📂 Checkout code
+        uses: actions/checkout@v4
+      - uses: arduino/setup-task@v2
+        with:
+          repo-token: "${{ secrets.GITHUB_TOKEN }}"
+      - run: ./.github/workflows/scripts/set_version.sh
+      - name: 💰 Cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          prefix-key: ${{ env.version }}-${{ hashFiles('Cargo.lock') }}
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+          shared-key: lib
+      - run: task build-php
+      - run: task test-php

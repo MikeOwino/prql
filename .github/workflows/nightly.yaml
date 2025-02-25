@@ -1,17 +1,40 @@
+# A workflow containing jobs we run only on nightly. This is called by
+# `tests.yaml` on a schedule and on request with a `pr-nightly` label. The
+# workflow encapsulates lots of jobs rather than listing them all in `tests.yaml`
+# and conditioning each on `nightly` (wouldn't be terrible but less modular,).
+
 name: nightly
 
 on:
-  schedule:
-    # Pick a random time, something that others won't pick, to reduce GH's demand variance.
-    - cron: "49 10 * * *"
-  pull_request:
-    paths:
-      - ".github/workflows/nightly.yaml"
   workflow_call:
+  workflow_dispatch:
+
+# We need consistent env vars across all workflows for the cache to work
+env:
+  CARGO_TERM_COLOR: always
+  CLICOLOR_FORCE: 1
+  RUSTFLAGS: "-C debuginfo=0"
+  RUSTDOCFLAGS: "-Dwarnings"
 
 jobs:
   cargo-audit:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
+    # We can't read PRQL repo security events on forks, which causes this to
+    # incorrectly fail (
+    # https://github.com/PRQL/prql/actions/runs/5718693342/job/15495030808?pr=3195#step:3:28
+    # ). So we disable. If we wanted to run checks on PRs, we could move this to
+    # `pull-request-target`.
+    #
+    # Would be better if we could only run when we know we have permissions. But
+    # this will do...
+
+    # 2024-12-09 — this is failing on normal PRs despite clearing the advisories
+    # in GitHub, and the action is archived. We have the GitHub security audits,
+    # `prqlc` doesn't cross any trust boundaries, so disabling for the moment.
+    # We can re-enable if a supported action is available.
+    if:
+      ${{ github.repository_owner == 'prql' &&
+      !github.event.pull_request.head.repo.fork && 'run' == 'no' }}
     permissions:
       actions: read
       contents: read
@@ -20,65 +43,139 @@ jobs:
       checks: write
 
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions-rs/audit-check@v1
+      - uses: actions/checkout@v4
+      - uses: rustsec/audit-check@v2.0.0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
-  check-links:
-    # We run on modified files only in PR, so do another check of all files here.
-    runs-on: ubuntu-latest
+  cargo-bench:
+    runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v3
-      - uses: gaurav-nelson/github-action-markdown-link-check@v1
+      - uses: actions/checkout@v4
+      - uses: clechasseur/rs-cargo@v2
         with:
-          config-file: .github/.markdown-link-check.json
+          command: bench
+          # GH Actions is fairly noisy, so the precise details don't matter that
+          # much. We do want to check the benchmarks run, and possibly we can
+          # use this to identify and big changes in performance.
+          args: -- --warm-up-time=0.3 --measurement-time=1
 
   time-compilation:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     strategy:
       matrix:
         use_cache: [true, false]
     steps:
       - name: 📂 Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - uses: ./.github/actions/time-compilation
         with:
           use_cache: ${{ matrix.use_cache }}
+    # We need consistent env vars across all workflows for the cache to work
+    env:
+      CARGO_TERM_COLOR: always
+      CLICOLOR_FORCE: 1
+      RUSTFLAGS: "-C debuginfo=0"
+      RUSTDOCFLAGS: "-Dwarnings"
 
-  update-rust-toolchain:
-    runs-on: ubuntu-latest
+  check-unused-dependencies:
+    runs-on: ubuntu-22.04
     steps:
       - name: 📂 Checkout code
-        uses: actions/checkout@v3
-      - uses: a-kenji/update-rust-toolchain@main
+        uses: actions/checkout@v4
+      - run: rustup override set nightly-2025-01-12
+      - uses: baptiste0928/cargo-install@v3
         with:
-          minor-version-delta: 1
-          toolchain-path: "./rust-toolchain.toml"
-          pr-title: "build: Update rust toolchain version"
+          crate: cargo-udeps
+      # Once with all targets, once without, to find anything that should be in
+      # `dev` but is more general.
+      - uses: clechasseur/rs-cargo@v2
+        with:
+          command: udeps
+          args: --all-targets
+      - uses: clechasseur/rs-cargo@v2
+        with:
+          command: udeps
 
-  test-docker:
-    # We only test the build in `test-all`; this also runs tests.
-    runs-on: ubuntu-latest
+  # We now use the devcontainer. TODO: is it possible to have a similar test for
+  # that? Or that would require VSCode to install the dependencies?
+
+  # test-docker:
+  #   # We only test the build in `test-all`; this also runs tests.
+  #   runs-on: ubuntu-22.04
+  #   steps:
+  #     - name: 📂 Checkout code
+  #       uses: actions/checkout@v4
+
+  #     - uses: docker/setup-buildx-action@v2
+
+  #     - name: Build
+  #       uses: docker/build-push-action@v4
+  #       with:
+  #         tags: prql:latest
+  #         # Use the GHA cache
+  #         load: true
+  #         cache-from: type=gha
+  #         cache-to: type=gha,mode=max
+
+  #     # https://aschmelyun.com/blog/using-docker-run-inside-of-github-actions/
+  #     - name: Test
+  #       uses: addnab/docker-run-action@v3
+  #       with:
+  #         image: prql:latest
+  #         options: -v ${{ github.workspace }}/:/src
+  #         run: task test-rust
+
+  code-ql:
+    # Currently almost the default code-ql config
+    runs-on: ubuntu-22.04
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+
+    strategy:
+      fail-fast: false
+      matrix:
+        language: ["javascript", "python"]
+        # We could add java, but it require a custom build step and we have very little java...
+        # CodeQL supports [ 'cpp', 'csharp', 'go', 'java', 'javascript', 'python', 'ruby' ]
+        # Learn more about CodeQL language support at https://aka.ms/codeql-docs/language-support
+
     steps:
-      - name: 📂 Checkout code
-        uses: actions/checkout@v3
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      - uses: docker/setup-buildx-action@v2
-
-      - name: Build
-        uses: docker/build-push-action@v3
+      # Initializes the CodeQL tools for scanning.
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
         with:
-          tags: prql:latest
-          # Use the GHA cache
-          load: true
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          languages: ${{ matrix.language }}
+          # If you wish to specify custom queries, you can do so here or in a config file.
+          # By default, queries listed here will override any specified in a config file.
+          # Prefix the list here with "+" to use these queries and those in the config file.
 
-      # https://aschmelyun.com/blog/using-docker-run-inside-of-github-actions/
-      - name: Test
-        uses: addnab/docker-run-action@v3
-        with:
-          image: prql:latest
-          options: -v ${{ github.workspace }}/:/src
-          run: task test-rust
+          # Details on CodeQL's query packs refer to : https://docs.github.com/en/code-security/code-scanning/automatically-scanning-your-code-for-vulnerabilities-and-errors/configuring-code-scanning#using-queries-in-ql-packs
+          # queries: security-extended,security-and-quality
+
+      # Autobuild attempts to build any compiled languages  (C/C++, C#, or Java).
+      # If this step fails, then you should remove it and run the build manually (see below)
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v3
+
+      # ℹ️ Command-line programs to run using the OS shell.
+      # 📚 See https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idstepsrun
+
+      #   If the Autobuild fails above, remove it and uncomment the following three lines.
+      #   modify them (or add more) to build your code if your project, please refer to the EXAMPLE below for guidance.
+
+      # - run: |
+      #   echo "Run, Build Application using script"
+      #   ./location_of_script_within_repo/buildscript.sh
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+
+  nightly-release:
+    # Test release workflow
+    uses: ./.github/workflows/release.yaml

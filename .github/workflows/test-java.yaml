@@ -1,31 +1,40 @@
 name: test-java
 
 on:
-  push:
-    branches:
-      - main
-  pull_request:
-    paths:
-      - "prql-java/**"
-      - ".github/workflows/test-java.yaml"
   workflow_call:
+    inputs:
+      oss:
+        type: string
+        default: '["ubuntu-22.04"]'
+  workflow_dispatch:
+    inputs:
+      oss:
+        type: string
+        default: '["ubuntu-22.04"]'
 
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+# We need consistent env vars across all workflows for the cache to work
+env:
+  CARGO_TERM_COLOR: always
+  CLICOLOR_FORCE: 1
+  RUSTFLAGS: "-C debuginfo=0"
+  RUSTDOCFLAGS: "-Dwarnings"
 
 jobs:
   test:
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest]
-    runs-on: ${{matrix.os}}
+        os: ${{ fromJSON(inputs.oss) }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
-      # Java test is simple enough that it's not worth splitting out into a
-      # separate action. These three lines are copied to test-all, which runs on
-      # each merge.
+        uses: actions/checkout@v4
+      - run: ./.github/workflows/scripts/set_version.sh
+      - name: 💰 Cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          prefix-key: ${{ env.version }}-${{ hashFiles('Cargo.lock') }}
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+          shared-key: lib
       - name: Maven test
-        working-directory: prql-java/java/
+        working-directory: prqlc/bindings/java/java/
         run: ./mvnw test

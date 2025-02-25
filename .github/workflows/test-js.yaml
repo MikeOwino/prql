@@ -1,29 +1,56 @@
 name: test-js
 
 on:
-  push:
-    branches:
-      - main
-  pull_request:
-    paths:
-      - "prql-js/**"
-      - ".github/workflows/test-js.yaml"
   workflow_call:
+    inputs:
+      oss:
+        type: string
+        default: '["ubuntu-22.04"]'
+  workflow_dispatch:
+    inputs:
+      oss:
+        type: string
+        default: '["ubuntu-22.04"]'
 
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+# We need consistent env vars across all workflows for the cache to work
+env:
+  CARGO_TERM_COLOR: always
+  CLICOLOR_FORCE: 1
+  RUSTFLAGS: "-C debuginfo=0"
+  RUSTDOCFLAGS: "-Dwarnings"
 
 jobs:
   test:
-    # This is copy & pasted into test-all.yaml
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest]
+        os: ${{ fromJSON(inputs.oss) }}
     steps:
       - name: 📂 Checkout code
-        uses: actions/checkout@v3
-      - uses: ./.github/actions/build-prql-js
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "21.x"
+
+      - uses: baptiste0928/cargo-install@v3
+        with:
+          crate: wasm-pack
+
+      - run: ./.github/workflows/scripts/set_version.sh
+
+      - name: 💰 Cache
+        uses: Swatinem/rust-cache@v2
+        id: cache
+        with:
+          prefix-key: ${{ env.version }}-${{ hashFiles('Cargo.lock') }}
+          # `web` is the closest rust cache key. It's useful on ubuntu (last
+          # checked, roughly halved the time, to 4 min), but not on other OSs
+          # given we don't have those caches. We can't use a separate one given
+          # we're out of cache space.
+          shared-key: web
+          save-if: false
+
       - run: npm cit
-        working-directory: prql-js
+        working-directory: prqlc/bindings/js

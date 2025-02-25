@@ -1,0 +1,65 @@
+name: build-devcontainer
+
+on:
+  workflow_call:
+    inputs:
+      push:
+        type: boolean
+        default: false
+  workflow_dispatch:
+    inputs:
+      push:
+        type: boolean
+        default: false
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 3600
+    steps:
+      - name: 📂 Checkout code
+        uses: actions/checkout@v4
+
+      - uses: docker/metadata-action@v5
+        id: meta
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/prql-devcontainer-base
+          # We could use explicit tags (but mostly we just want the most recent version).
+          tags: |
+            type=raw,latest
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Prep args
+        run: |
+          echo "cargo_crates=$(yq -r '.vars.cargo_crates' Taskfile.yaml)" >>"$GITHUB_ENV"
+
+      - name: Build
+        uses: docker/build-push-action@v6
+        timeout-minutes: 3600
+        with:
+          context: .devcontainer/base-image
+          build-args: |
+            cargo_crates=${{ env.cargo_crates }}
+          tags: ${{ steps.meta.outputs.tags }}
+          platforms: linux/amd64, linux/arm64
+          push: ${{ inputs.push }}
+          # `type=gha` not active, see below
+          cache-from: |
+            ${{ steps.meta.outputs.tags }}
+            type=gha
+          cache-to: |
+            type=inline
+          # Disabling GHA cache due to Https://github.com/docker/build-push-action/issues/939
+          # ${{ github.ref_name == 'main' && 'type=gha,mode=max' || '' }}

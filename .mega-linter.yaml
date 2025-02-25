@@ -1,0 +1,49 @@
+GITHUB_COMMENT_REPORTER: false
+DISABLE:
+  - RUST
+  - JAVASCRIPT
+  - PYTHON
+DISABLE_LINTERS:
+  - SPELL_CSPELL
+  - CSS_STYLELINT
+  - PHP_PSALM
+  - PHP_PHPSTAN # Disabled for now as we couldn't figure out how to prevent false positives. #2069
+  - SQL_TSQLLINT
+  - REPOSITORY_KICS
+  - SPELL_LYCHEE # Throwing network errors. We already check link in other GH actions.
+  - MARKDOWN_MARKDOWN_LINK_CHECK # Slow (40+ seconds). We already check links in other GH actions.
+  - REPOSITORY_TRUFFLEHOG # Detecting secrets in .git/config, which is not even committed.
+  - REPOSITORY_GRYPE # Slow (10+ seconds). Blocking unrelated PRs. We already have depandabot.
+  - YAML_V8R # Slow (70+ seconds). We don't use YAML schema.
+  - JSON_V8R # Failing for vscode-style syntax (comments).
+  - REPOSITORY_GITLEAKS # False positive on codecov token, which according to codecov is fine to have hardcoded
+DISABLE_ERRORS_LINTERS:
+  - COPYPASTE_JSCPD
+  - REPOSITORY_TRIVY
+  - REPOSITORY_CHECKOV
+  - REPOSITORY_DEVSKIM
+  - BASH_SHELLCHECK
+  - C_CPPLINT
+  - CPP_CPPLINT
+  - DOCKERFILE_HADOLINT
+  - HTML_DJLINT
+  - HTML_HTMLHINT
+  - JAVA_CHECKSTYLE
+  - JAVA_PMD
+  - JSON_JSONLINT
+  - MAKEFILE_CHECKMAKE
+  - MARKDOWN_MARKDOWN_LINK_CHECK
+  # Prevents us from starting a new library, since it raises an error on unpublished libraries. Can remove after publishing...
+  - REPOSITORY_DUSTILOCK
+  - SPELL_MISSPELL
+  # Disabled for now, as @max-sixty didn't know whether "Unable to locate the
+  # project file. A project file (tsconfig.json or tsconfig.eslint.json) is
+  # required in order to use ts-standard." was worth fixing, from #3608. Happy
+  # for someone more informed to turn it back on.
+  - TYPESCRIPT_STANDARD
+  # Disabled for now, as @max-sixty didn't know how to fix
+  # `./prqlc/bindings/php/tests/CompilerTest.php (trailing_comma_in_multiline)`.
+  # Fine for someone else to take a look.
+  - PHP_PHPCSFIXER
+PHP_PHPCS_ARGUMENTS:
+  - --standard=PSR12

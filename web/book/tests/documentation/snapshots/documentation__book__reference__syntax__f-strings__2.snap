@@ -1,0 +1,12 @@
+---
+source: web/book/tests/documentation/book.rs
+expression: "from tracks\nselect length_str = f\"{length_seconds / 60} minutes\"\n"
+snapshot_kind: text
+---
+Error:
+   ╭─[:2:38]
+   │
+ 2 │ select length_str = f"{length_seconds / 60} minutes"
+   │                                      ┬
+   │                                      ╰── interpolated string expected one of ".", ":" or "}", but found " "
+───╯

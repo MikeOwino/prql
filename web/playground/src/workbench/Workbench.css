@@ -1,0 +1,88 @@
+.column {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+}
+.tabs {
+  display: flex;
+  flex-grow: 1;
+  overflow-y: hidden;
+}
+.tab {
+  flex-grow: 1;
+  flex-basis: 0;
+  max-width: 50%;
+  height: 100%;
+
+  display: flex;
+  flex-direction: column;
+  overflow-x: hidden;
+}
+.tab:not(:first-child) {
+  border-left: 1px solid #666;
+}
+.tab > * {
+  flex-grow: 1;
+}
+.tab-top {
+  flex-grow: 0;
+  display: flex;
+  align-items: center;
+}
+.tab-top button {
+  border: 0;
+  background: dimgrey;
+  color: inherit;
+  font-size: inherit;
+  font-family: inherit;
+  cursor: pointer;
+}
+.tab-top .action {
+  padding: 2px 1em;
+  font-size: 80%;
+  text-decoration: underline;
+  color: lightblue;
+}
+.spacer {
+  flex-grow: 1;
+}
+.tab-title {
+  flex-grow: 0;
+  align-self: start;
+  padding: 3px 0.75em;
+  display: inline;
+}
+.tab-title.active {
+  background: #222;
+}
+.error-pane {
+  padding: 1rem;
+  margin: 0;
+  width: 100%;
+
+  max-height: 50%;
+  overflow-y: auto;
+  flex-shrink: 0;
+
+  font-family: monospace;
+  white-space: pre-wrap;
+
+  border-top: 1px solid;
+  border-color: red;
+  background-color: #552222;
+}
+.tab-content {
+  background: #222;
+}
+pre.hljs {
+  margin: 0;
+  background: #222;
+  height: 100%;
+  overflow-y: scroll;
+  padding-left: 2em;
+}
+pre.hljs code {
+  font-size: 14px;
+}

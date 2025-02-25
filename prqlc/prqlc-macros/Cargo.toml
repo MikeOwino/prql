@@ -1,0 +1,23 @@
+[package]
+description = "Macros for PRQL compilation at build time"
+name = "prqlc-macros"
+
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[lib]
+bench = false
+doctest = false
+proc-macro = true
+test = false
+
+[dependencies]
+prqlc = {path = "../prqlc", default-features = false, version = "0.13.4" }
+syn = "2.0.98"
+
+[package.metadata.release]
+tag-name = "{{version}}"
+tag-prefix = ""

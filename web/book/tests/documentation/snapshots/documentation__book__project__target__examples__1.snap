@@ -1,0 +1,13 @@
+---
+source: web/book/tests/documentation/book.rs
+expression: "prql target:sql.mssql\n\nfrom employees\nsort age\ntake 10\n"
+snapshot_kind: text
+---
+SELECT
+  *
+FROM
+  employees
+ORDER BY
+  age OFFSET 0 ROWS
+FETCH FIRST
+  10 ROWS ONLY

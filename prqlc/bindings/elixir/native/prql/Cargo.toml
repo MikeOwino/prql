@@ -1,0 +1,25 @@
+[package]
+authors = ["Kasun Vithanage <kasvith.me@gmail.com>"]
+description = "Elixir NIF bindings for prqlc"
+name = "prql"
+publish = false
+
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[lib]
+bench = false
+crate-type = ["cdylib"]
+doc = false
+doctest = false
+name = "prql"
+path = "src/lib.rs"
+test = false
+
+# See Readme for details on Mac
+[target.'cfg(not(any(target_family="wasm", target_os = "macos")))'.dependencies]
+prqlc = {path = "../../../../prqlc", default-features = false, version = "0.13.4" }
+rustler = "0.36.1"

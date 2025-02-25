@@ -4,34 +4,36 @@ description: Time the cargo compilation, outputting an HTML file.
 inputs:
   use_cache:
     required: true
-    type: boolean
+    description: Whether to use the cache of dependencies
 
 runs:
   using: composite
   steps:
-    # We need to pin the toolchain so caching works across days; and it requires nightly atm.
-    - name: 🔗 Setup toolchain
+    - run: ./.github/workflows/scripts/set_version.sh
       shell: bash
-      # Doing this ourselves since https://github.com/dtolnay/rust-toolchain/issues/29
-      run: rustup override set nightly-2022-10-22
     - name: 💰 Cache
       id: cache
       uses: Swatinem/rust-cache@v2
-      # 'true' seems to require quotes (and using `inputs.use_cache` doesn't
-      # work); I'm really not sure why. There are some issues on the interwebs
-      # around this, but I couldn't find one that explained it.
+      with:
+        prefix-key: ${{ env.version }}-${{ hashFiles('Cargo.lock') }}
+        save-if: ${{ github.ref == 'refs/heads/main' }}
+      # 'true' seems to require quotes (and using a bare `inputs.use_cache`
+      # doesn't work); I'm really not sure why. There are some issues on the
+      # interwebs around this, but I couldn't find one that explained it.
       if: inputs.use_cache == 'true'
     - name: Remove cached results
       shell: bash
       run: rm -rf target/cargo-timings
     - name: 🏭 Compile
-      uses: richb-hanover/cargo@v1.1.0
+      uses: clechasseur/rs-cargo@v2
       with:
         command: build
-        args: --timings=html --all-targets -Z unstable-options
-    - uses: actions/upload-artifact@v3
+        args: --timings --all-targets
+    - uses: actions/upload-artifact@v4
       with:
-        name: cargo-timing.html
+        name:
+          cargo-timing-${{ inputs.use_cache == 'true' && 'cache' || 'no_cache'
+          }}.html
         path: target/cargo-timings/cargo-timing-*.html
         if-no-files-found: error
         # Only upload if a) we got a cache hit or b) we didn't want to use the cache anyway

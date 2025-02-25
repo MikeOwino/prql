@@ -1,0 +1,9 @@
+---
+source: web/book/tests/documentation/book.rs
+expression: "from invoices\naggregate (\n    count this\n)\n"
+snapshot_kind: text
+---
+SELECT
+  COUNT(*)
+FROM
+  invoices

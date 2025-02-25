@@ -1,26 +1,65 @@
 [workspace]
 members = [
-  "prql-compiler",
-  "prql-compiler/examples/compile-files",
-  "prql-compiler/prql-compiler-macros",
-  "prql-java",
-  "prql-lib",
-  "prql-js",
-  "prql-python",
-  "book",
+  "prqlc/bindings/elixir/native/prql",
+  "prqlc/bindings/java",
+  "prqlc/bindings/js",
+  "prqlc/bindings/prqlc-c",
+  "prqlc/bindings/prqlc-python",
+  "prqlc/prqlc-macros",
+  "prqlc/prqlc-parser",
+  "prqlc/prqlc",
+  "prqlc/prqlc/examples/compile-files", # An example
+  "web/book",
 ]
-# Note we don't have a `default-members = ["prql-compiler"]`, since that causes
-# commands like `cargo test` to only run tests from the default package. And
-# `cargo insta test` doesn't have a `--workspace` flag.
-
-[profile.release.package.prql-js]
-# Tell `rustc` to optimize for small code size.
-opt-level = "s"
+resolver = "2"
 
 [workspace.package]
-version = "0.4.0"
+authors = ["PRQL Developers"]
+edition = "2021"
+license = "Apache-2.0"
+repository = "https://github.com/PRQL/prql"
+# This isn't tested since `cargo-msrv` doesn't support workspaces; instead we
+# test `metadata.msrv` in `prqlc`
+rust-version = "1.70.0"
+version = "0.13.4"
+
+[profile.release]
+lto = true
+# Optimize for binary size in releases of all crates,
+# since compiler is fast enough as it is (for now).
+opt-level = "s"
+
+[profile.release.package.prqlc-c]
+# Remove some debug symbols (linker needs some of them)
+strip = "debuginfo"
+
+# Insta runs faster this way, ref https://insta.rs/docs/quickstart/
+[profile.dev.package.insta]
+opt-level = 3
+[profile.dev.package.similar]
+opt-level = 3
 
 [workspace.metadata.release]
+allow-branch = ["*"]
 consolidate-commits = true
-pre-release-commit-message = "chore: Release {{version}}"
-shared-version = true
+
+[workspace.dependencies]
+anyhow = "1.0.95"
+arrow = { version = "53", features = [
+  "pyarrow",
+  "prettyprint",
+], default-features = false }
+enum-as-inner = "0.6.1"
+insta = { version = "1.41.1", features = ["colors", "glob", "yaml", "filters"] }
+insta-cmd = "0.6.0"
+itertools = "0.13.0"
+log = "0.4.25"
+pyo3 = { version = "0.22.6", features = ["abi3-py37", "anyhow"] }
+pyo3-build-config = "0.22.6"
+schemars = "1.0.0-alpha.17"
+semver = { version = "1.0.25", features = ["serde"] }
+serde = { version = "1.0.217", features = ["derive"] }
+serde_json = "1.0.138"
+serde_yaml = { version = "0.9.34" }
+similar = "2.7.0"
+similar-asserts = "1.6.1"

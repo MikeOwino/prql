@@ -2,15 +2,20 @@
 
 <!-- User badges on first line (language docs & chat) -->
 
-[![Language Docs](https://img.shields.io/badge/DOCS-LANGUAGE-blue?style=for-the-badge)](https://prql-lang.org)
-[![Discord](https://img.shields.io/discord/936728116712316989?label=discord%20chat&style=for-the-badge)](https://discord.gg/eQcfaCmsNc)
-[![Twitter](https://img.shields.io/twitter/follow/prql_lang?color=%231DA1F2&style=for-the-badge)](https://twitter.com/prql_lang)
+<!-- Discord online count is blocked rate limits, can try swapping back [![Discord](https://img.shields.io/discord/936728116712316989?label=discord%20chat&style=for-the-badge)](https://discord.gg/eQcfaCmsNc) -->
+<!-- Twitter followers doesn't work, but leaving the badge there -->
 
-<!-- Dev badges on first line (language docs & chat) -->
+[![Website](https://img.shields.io/badge/INTRO-WEB-blue?style=for-the-badge)](https://prql-lang.org)
+[![Playground](https://img.shields.io/badge/INTRO-PLAYGROUND-blue?style=for-the-badge)](https://prql-lang.org/playground)
+[![Language Docs](https://img.shields.io/badge/DOCS-BOOK-blue?style=for-the-badge)](https://prql-lang.org/book)
+[![Discord](https://img.shields.io/badge/DISCORD-CHAT-indigo?style=for-the-badge&logo=discord)](https://discord.gg/eQcfaCmsNc)
+[![Twitter](https://img.shields.io/twitter/follow/prql_lang?color=%231DA1F2&style=for-the-badge&logo=x)](https://twitter.com/prql_lang)
 
-[![GitHub CI Status](https://img.shields.io/github/actions/workflow/status/PRQL/prql/test-all.yaml?branch=main&logo=github&style=for-the-badge)](https://github.com/PRQL/prql/actions?query=branch%3Amain+workflow%3Atest-all)
-[![GitHub contributors](https://img.shields.io/github/contributors/PRQL/prql?style=for-the-badge)](https://github.com/PRQL/prql/graphs/contributors)
-[![Stars](https://img.shields.io/github/stars/PRQL/prql?style=for-the-badge)](https://github.com/PRQL/prql/stargazers)
+<!-- Dev badges on second line -->
+
+[![GitHub CI Status](https://img.shields.io/github/actions/workflow/status/prql/prql/tests.yaml?event=push&branch=main&logo=github&style=for-the-badge)](https://github.com/PRQL/prql/actions?query=branch%3Amain+workflow%3Atests)
+[![GitHub contributors](https://img.shields.io/github/contributors/PRQL/prql?style=for-the-badge&logo=github)](https://github.com/PRQL/prql/graphs/contributors)
+[![Stars](https://img.shields.io/github/stars/PRQL/prql?style=for-the-badge&logo=github)](https://github.com/PRQL/prql/stargazers)
 
 **P**ipelined **R**elational **Q**uery **L**anguage, pronounced "Prequel".
 
@@ -23,35 +28,35 @@ since it compiles to SQL.
 PRQL can be as simple as:
 
 ```elm
-from employees
-filter country == "USA"                       # Each line transforms the previous result
-aggregate [                                   # `aggregate` reduces each column to a value
-  max salary,
-  min salary,
-  count,                                      # Trailing commas are allowed
-]
+from tracks
+filter artist == "Bob Marley"                 # Each line transforms the previous result
+aggregate {                                   # `aggregate` reduces each column to a value
+  plays    = sum plays,
+  longest  = max length,
+  shortest = min length,                      # Trailing commas are allowed
+}
 ```
 
-Here's a fuller example of the language;
+Here's a larger example of the language:
 
 ```elm
 from employees
 filter start_date > @2021-01-01               # Clear date syntax
-derive [                                      # `derive` adds columns / variables
+derive {                                      # `derive` adds columns / variables
   gross_salary = salary + (tax ?? 0),         # Terse coalesce
   gross_cost = gross_salary + benefits_cost,  # Variables can use other variables
-]
+}
 filter gross_cost > 0
-group [title, country] (                      # `group` runs a pipeline over each group
-  aggregate [                                 # `aggregate` reduces each group to a value
+group {title, country} (                      # `group` runs a pipeline over each group
+  aggregate {                                 # `aggregate` reduces each group to a value
     average gross_salary,
     sum_gross_cost = sum gross_cost,          # `=` sets a column name
-  ]
+  }
 )
 filter sum_gross_cost > 100_000               # `filter` replaces both of SQL's `WHERE` & `HAVING`
-derive id = f"{title}_{country}"              # F-strings like python
+derive id = f"{title}_{country}"              # F-strings like Python
 derive country_code = s"LEFT(country, 2)"     # S-strings allow using SQL as an escape hatch
-sort [sum_gross_cost, -country]               # `-country` means descending order
+sort {sum_gross_cost, -country}               # `-country` means descending order
 take 1..20                                    # Range expressions (also valid here as `take 20`)
 ```
 
@@ -59,22 +64,45 @@ For more on the language, more examples & comparisons with SQL, visit
 [prql-lang.org][prql website]. To experiment with PRQL in the browser, check out
 [PRQL Playground][prql playground].
 
-## Current Status - January 2023
+## Current Status - October 2024
 
 PRQL is being actively developed by a growing community. It's ready to use by
-the intrepid, either as part of one of our supported extensions, or within your
-own tools, using one of our supported language bindings.
+the intrepid, either with our supported integrations, or within your own tools,
+using one of our supported language bindings.
 
-PRQL continues to evolve toward the
-[0.4 Milestone.](https://github.com/PRQL/prql/milestone/4) The
-[CHANGELOG.md](https://github.com/PRQL/prql/blob/main/CHANGELOG.md) gives more
-information.
+PRQL still has some bugs and some missing features, and is probably only ready
+to be rolled out to non-technical teams for fairly simple queries.
 
-PRQL still has some minor bugs and some missing features, and probably is only
-ready to rolled out to non-technical teams for fairly simple queries. We're
-exploring where to focus further development; we welcome use-cases. Here's our
-current [Roadmap](https://prql-lang.org/roadmap/) and our longer-term
-[set of Milestones.](https://github.com/PRQL/prql/milestones)
+In particular, we're working on a new resolver, which will let us squash many
+bugs and simplify our code a lot. It'll also let us scale the language without
+scaling the complexity of the compiler.
+
+While we work on that, we're also focusing on
+
+- Ensuring our supported features feel extremely robust; resolving any
+  [priority bugs](https://github.com/PRQL/prql/issues?q=is%3Aissue+is%3Aopen+label%3Abug+label%3Apriority).
+  As more folks have started using PRQL, we've had more bug reports — good news,
+  but also gives us more to work on.
+- Filling remaining feature gaps, so that PRQL is possible to use for almost all
+  standard SQL queries.
+- Expanding our set of supported features — we are working to add experimental
+  support for modules / multi-file projects, and for auto-formatting.
+
+We're also spending time thinking about:
+
+- Making it really easy to start using PRQL. We're doing that by building
+  integrations with tools that folks already use; for example a VS Code
+  extension, Jupyter integration, and the recent
+  [QStudio](https://www.timestored.com/qstudio/prql-ide) integration. If there
+  are tools you're familiar with that you think would be open to integrating
+  with PRQL, please let us know in an issue.
+- Whether all our initial decisions were correct — for example
+  [how we handle window functions outside of a `window` transform](https://github.com/PRQL/prql/issues/2723).
+- Making it easier to contribute to the compiler. We have a wide group of
+  contributors to the project, but contributions to the compiler itself are
+  quite concentrated. We're keen to expand this;
+  [#1840](https://github.com/PRQL/prql/issues/1840) for feedback, some
+  suggestions on starter issues are below.
 
 ## Get involved
 
@@ -86,43 +114,48 @@ To stay in touch with PRQL:
 - [Contribute][contributing] — join us in building PRQL, through writing code
   [(send us your use-cases!)](https://github.com/PRQL/prql/discussions), or
   inspiring others to use it.
-- See the [development](DEVELOPMENT.md) documentation for PRQL. It's easy to get
+- See the [development][development] documentation for PRQL. It's easy to get
   started — the project can be built in a couple of commands, and we're a really
   friendly community!
+- For those who might be interested in contributing to the code now, check out
+  issues with the
+  [good first issue](https://github.com/PRQL/prql/labels/good%20first%20issue)
+  label. Always feel free to ask questions or open a draft PR.
 
 ## Explore
 
 - [PRQL Playground][prql playground] — experiment with PRQL in the browser.
 - [PRQL Book][prql book] — the language documentation.
-- [dbt-prql][dbt-prql] — write PRQL in dbt models.
 - [Jupyter magic](https://pyprql.readthedocs.io/en/latest/magic_readme.html) —
   run PRQL in Jupyter, either against a DB, or a Pandas DataFrame / CSV /
   Parquet file through DuckDB.
 - [pyprql Docs](https://pyprql.readthedocs.io) — the pyprql documentation, the
-  python bindings to PRQL, including Jupyter magic.
-- [PRQL VSCode Extension](https://marketplace.visualstudio.com/items?itemName=prql-lang.prql-vscode)
-- [prql-js](https://www.npmjs.com/package/prql-js) — JavaScript bindings for
+  Python bindings to PRQL, including Jupyter magic.
+- [PRQL VS Code extension](https://marketplace.visualstudio.com/items?itemName=prql-lang.prql-vscode)
+- [prqlc-js](https://www.npmjs.com/package/prqlc) — JavaScript bindings for
   PRQL.
 
-### Contributors
+## Repo organization
+
+This repo is composed of:
+
+- **[prqlc](./prqlc/)** — the compiler, written in rust, whose main role is to
+  compile PRQL into SQL. Also contains the CLI and bindings from various
+  languages.
+- **[web](./web/)** — our web content: the [Book][prql book],
+  [Website][prql website], and [Playground][prql playground].
+
+It also contains our testing / CI infrastructure and development tools. Check
+out our [development docs][development] for more details.
+
+## Contributors
 
 Many thanks to those who've made our progress possible:
 
 [![Contributors](https://contrib.rocks/image?repo=PRQL/prql)](https://github.com/PRQL/prql/graphs/contributors)
 
-### Core developers
-
-We have core developers who are responsible for reviewing code, making decisions
-on the direction of the language, and project administration:
-
-- [**@aljazerzen**](https://github.com/aljazerzen) — Aljaž Mur Eržen
-- [**@max-sixty**](https://github.com/max-sixty) — Maximilian Roos
-- [**@snth**](https://github.com/snth) — Tobias Brandt
-
-We welcome others to join who have a track record of contributions.
-
 [prql book]: https://prql-lang.org/book
 [prql website]: https://prql-lang.org
-[contributing]: ./CONTRIBUTING.md
+[contributing]: https://prql-lang.org/book/project/contributing/
+[development]: https://prql-lang.org/book/project/contributing/development.html
 [prql playground]: https://prql-lang.org/playground
-[dbt-prql]: https://github.com/prql/dbt-prql

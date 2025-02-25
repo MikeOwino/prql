@@ -1,0 +1,10 @@
+---
+source: web/book/tests/documentation/book.rs
+expression: "from employees\nderive {avg_sal = average salary}\n"
+snapshot_kind: text
+---
+SELECT
+  *,
+  AVG(salary) OVER () AS avg_sal
+FROM
+  employees
